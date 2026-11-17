@@ -75,6 +75,23 @@ body{overflow-x:hidden}
 @media(max-width:800px){.film{height:300vh}.film-copy{left:7%;right:7%;bottom:17vh}.film-copy h2{font-size:clamp(48px,13vw,76px);letter-spacing:-2px}.film-copy p{font-size:12px}.film-bottom{left:7%;right:7%;bottom:25px}.film-caption{right:4%;font-size:8px}.film-scroll-hint{display:none}}
 @media(prefers-reduced-motion:reduce){.film{height:auto}.film-stage{height:auto;position:relative}.film-scene{position:relative;min-height:75vh;opacity:1!important;visibility:visible!important}.film-copy{opacity:1!important;transform:none!important;position:absolute}.film-bottom,.film-caption{display:none}}
 
+
+/* Isometric Three.js property world */
+.iso-world{height:300vh;background:#111b15;color:#f5f1e8;position:relative}
+.iso-sticky{height:100vh;height:100svh;position:sticky;top:0;overflow:hidden;background:radial-gradient(ellipse at 62% 42%,#34483a 0%,#18271e 48%,#0d1711 100%)}
+.iso-canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+.iso-vignette{position:absolute;inset:0;pointer-events:none;background:linear-gradient(90deg,rgba(8,16,11,.78),rgba(8,16,11,.1) 72%),linear-gradient(0deg,rgba(8,16,11,.52),transparent 38%)}
+.iso-copy{position:absolute;z-index:2;left:9vw;top:50%;transform:translateY(-50%);max-width:430px;pointer-events:none}
+.iso-copy .kicker{color:#d4b88d}
+.iso-copy h2{font:500 clamp(46px,6vw,78px)/1 'Playfair Display',serif;letter-spacing:-2.5px;margin:22px 0}
+.iso-copy h2 em{color:#d4b88d;font-weight:500}
+.iso-copy p{font-size:13px;line-height:1.9;color:rgba(255,255,255,.74);max-width:350px}
+.iso-step{font-size:9px;letter-spacing:2.5px;text-transform:uppercase;color:#d4b88d;margin-top:35px}
+.iso-meter{position:absolute;z-index:3;left:9vw;bottom:35px;width:min(280px,38vw);height:1px;background:rgba(255,255,255,.25)}
+.iso-meter i{display:block;height:100%;width:100%;background:#d4b88d;transform:scaleX(0);transform-origin:left}
+.iso-hint{position:absolute;right:7vw;bottom:30px;color:rgba(255,255,255,.6);font-size:9px;letter-spacing:2px;text-transform:uppercase;z-index:3}
+@media(max-width:800px){.iso-world{height:250vh}.iso-copy{top:12%;left:7%;right:7%;transform:none;max-width:360px}.iso-copy h2{font-size:48px;margin:12px 0}.iso-copy p{font-size:11px;max-width:280px}.iso-canvas{top:18%;height:78%}.iso-meter{left:7%;bottom:24px}.iso-hint{display:none}}
+@media(prefers-reduced-motion:reduce){.iso-world{height:auto}.iso-sticky{position:relative;height:80vh}}
 </style>
 </head>
 <body>
@@ -105,7 +122,21 @@ body{overflow-x:hidden}
  </div>
 </section>
 
-<div class="search-wrap"><div class="search-grid">
+
+<section class="iso-world" id="isometric">
+ <div class="iso-sticky">
+  <canvas id="isoCanvas" class="iso-canvas" aria-label="Interactive isometric 3D villa"></canvas>
+  <div class="iso-vignette"></div>
+  <div class="iso-copy">
+   <div class="kicker">The Limra perspective · 04</div>
+   <h2>A home,<br>from every <em>angle.</em></h2>
+   <p>Explore the architecture as the story unfolds. A miniature world of light, landscape and thoughtful detail — brought to life in 3D.</p>
+   <div class="iso-step" id="isoStep">01 / The complete picture</div>
+  </div>
+  <div class="iso-meter"><i id="isoMeter"></i></div><div class="iso-hint">Scroll to explore ↓</div>
+ </div>
+</section>
+\n<div class="search-wrap"><div class="search-grid">
 <div class="field"><label>I'm looking to</label><select id="intent"><option>Buy a property</option><option>Rent a property</option><option>Sell my property</option></select></div>
 <div class="field"><label>Location</label><select id="location"><option value="All locations">All locations</option><option>Tirunelveli</option><option>Chennai</option><option>Bengaluru</option><option>Coimbatore</option></select></div>
 <div class="field"><label>Property type</label><select id="type"><option>Any property</option><option>Villa</option><option>Apartment</option><option>House</option></select></div>
@@ -234,4 +265,74 @@ if(canvas){
 })();
 </script>
 
-</body></html>
+
+<script type="module">
+import * as THREE from 'https://esm.sh/three@0.160.0';
+const canvas=document.getElementById('isoCanvas');
+if(canvas){
+ const scene=new THREE.Scene();
+ const camera=new THREE.OrthographicCamera(-10,10,7,-7,.1,100);
+ camera.position.set(12,13,15);camera.lookAt(0,0,0);
+ const renderer=new THREE.WebGLRenderer({canvas,alpha:true,antialias:true});
+ renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.7));
+ renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+ renderer.outputColorSpace=THREE.SRGBColorSpace;
+ renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.15;
+ const world=new THREE.Group();scene.add(world);
+ const mat=(color,roughness=.8,metalness=0)=>new THREE.MeshStandardMaterial({color,roughness,metalness});
+ const grass=mat(0x71866a),plinth=mat(0xd0c7b5),wall=mat(0xe2d9c7),wallShade=mat(0xb9b19f),roof=mat(0x354a3d),wood=mat(0x805e43),glass=new THREE.MeshPhysicalMaterial({color:0x8bb0ad,roughness:.12,metalness:.15,transparent:true,opacity:.82}),gold=mat(0xc5a36e,.35,.45),water=new THREE.MeshPhysicalMaterial({color:0x4c9b9b,roughness:.16,metalness:.18,transparent:true,opacity:.88}),leaf=mat(0x426348);
+ const box=(w,h,d,x,y,z,m,parent=world)=>{let o=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m);o.position.set(x,y,z);o.castShadow=true;o.receiveShadow=true;parent.add(o);return o};
+ const base=box(11,.55,8,0,-.15,0,plinth);base.position.y=-.18;
+ box(10.7,.12,7.7,0,.18,0,grass);
+ // driveway and stone path
+ box(2.3,.035,4.5,3.45,.26,1.35,wallShade);
+ for(let i=0;i<5;i++)box(1.7,.035,.62,3.45,.29,-.4+i*.86,plinth);
+ // main villa mass and upper wing
+ box(5.2,2.45,3.9,-.7,1.45,-.5,wall);
+ box(4.9,.22,3.65,-.7,2.76,-.5,roof);
+ box(3.25,1.8,3.25,-1.5,3.72,-.35,wallShade);
+ box(3.45,.18,3.45,-1.5,4.7,-.35,roof);
+ // warm timber facade fins on right elevation
+ for(let i=0;i<11;i++)box(.09,2.1,.12,1.88+i*.17,1.5,-2.48,wood);
+ // glass front openings with frame
+ for(let x=-2.55;x<=.85;x+=1.12){box(.86,1.52,.055,x,1.43,1.48,glass);box(.055,1.6,.08,x,1.43,1.52,gold)}
+ for(let x=-2.3;x<=-.5;x+=.9){box(.68,1.15,.05,x,3.72,1.31,glass);box(.045,1.23,.07,x,3.72,1.35,gold)}
+ // covered terrace, columns and balcony
+ box(5.4,.14,1.15,-.65,.42,2.2,roof);
+ for(let x=-3.05;x<=1.7;x+=1.55)box(.1,1.85,.1,x,1.35,2.63,gold);
+ box(3.55,.1,.12,-1.5,2.75,1.45,gold);
+ // entry door
+ box(.9,1.9,.09,1.95,1.28,1.49,wood);
+ // rooftop pergola
+ for(let x=-2.7;x<-.1;x+=.62)box(.07,.9,.07,x,5.2,-.1,gold);
+ box(2.9,.09,3.0,-1.5,5.68,-.35,roof);
+ // swimming pool and coping
+ box(3.2,.16,2.25,-3.25,.34,2.25,wallShade);
+ box(2.95,.08,2.0,-3.25,.45,2.25,water);
+ // garden beds
+ box(1.5,.18,5.6,4.3,.34,-.35,wallShade);
+ // trees with layered foliage
+ function tree(x,z,s){let trunk=new THREE.Mesh(new THREE.CylinderGeometry(.08*s,.12*s,.85*s,8),wood);trunk.position.set(x,.72*s,z);trunk.castShadow=true;world.add(trunk);for(let j=0;j<3;j++){let crown=new THREE.Mesh(new THREE.IcosahedronGeometry(.55*s,1),leaf);crown.position.set(x,(1.1+j*.34)*s,z);crown.scale.set(1,1.05,.95);crown.castShadow=true;world.add(crown)}}
+ [[4,-2.8,1.1],[4.3,2.7,.85],[-4.2,-2.5,.85],[-4.5,2.7,.72],[2.8,-3.1,.65]].forEach(a=>tree(...a));
+ // low shrubs along garden border
+ for(let i=0;i<8;i++){let sh=new THREE.Mesh(new THREE.SphereGeometry(.28,12,10),leaf);sh.scale.set(1,.7,1);sh.position.set(3.65,.48,-2.35+i*.58);world.add(sh)}
+ // exterior lighting bollards
+ for(let i=0;i<4;i++){box(.12,.42,.12,2.65,.55,1.7+i*.62,gold)}
+ const hemi=new THREE.HemisphereLight(0xf5ead7,0x314237,2.1);scene.add(hemi);
+ const sun=new THREE.DirectionalLight(0xffdfb5,3.5);sun.position.set(-7,12,8);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);sun.shadow.camera.left=-12;sun.shadow.camera.right=12;sun.shadow.camera.top=12;sun.shadow.camera.bottom=-12;scene.add(sun);
+ const fill=new THREE.DirectionalLight(0x9ebbb1,1.3);fill.position.set(7,6,-8);scene.add(fill);
+ let scroll=0,rotation=0;
+ const section=document.getElementById('isometric'),meter=document.getElementById('isoMeter'),step=document.getElementById('isoStep');
+ const resize=()=>{let w=canvas.clientWidth,h=canvas.clientHeight;if(!w||!h)return;renderer.setSize(w,h,false);let aspect=w/h;let view=aspect>1?10:7.8;camera.left=-view*aspect/2;camera.right=view*aspect/2;camera.top=view/2;camera.bottom=-view/2;camera.updateProjectionMatrix()};
+ new ResizeObserver(resize).observe(canvas);resize();
+ const reduced=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+ if(window.gsap&&window.ScrollTrigger&&!reduced){
+  gsap.registerPlugin(ScrollTrigger);
+  gsap.to({p:0},{p:1,ease:'none',scrollTrigger:{trigger:section,start:'top top',end:'bottom bottom',scrub:1,onUpdate:self=>{scroll=self.progress;if(meter)gsap.set(meter,{scaleX:scroll});if(step)step.textContent=scroll<.34?'01 / The complete picture':scroll<.68?'02 / Details in the design':'03 / A place to belong'}}});
+ }else if(!reduced){window.addEventListener('scroll',()=>{let r=section.getBoundingClientRect();scroll=Math.max(0,Math.min(1,-r.top/(section.offsetHeight-innerHeight)))},{passive:true})}
+ const clock=new THREE.Clock();
+ function render(){requestAnimationFrame(render);const t=clock.getElapsedTime();const target=-.45+scroll*1.05;rotation+=(target-rotation)*.045;world.rotation.y=rotation+Math.sin(t*.25)*.012;world.position.y=Math.sin(t*.65)*.035;const zoom=scroll<.5?1+scroll*.14:1.07-(scroll-.5)*.1;camera.zoom=zoom;camera.updateProjectionMatrix();renderer.render(scene,camera)}
+ render();
+}
+</script>
+\n</body></html>
